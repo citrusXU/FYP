@@ -1,0 +1,6 @@
+*/logs/
+*.pyc
+*.pth.tar
+local/
+*/data
+*.sh
