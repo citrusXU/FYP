@@ -11,10 +11,10 @@ from tensorboard import SummaryWriter
 
 from prcg.dataset import get_dataset
 from prcg.utils import save_checkpoint, load_checkpoint
-from prcg.utils import Logger
+from prcg.utils import Logger, mkdir_if_missing
 from prcg.utils import transforms
 from prcg.utils import Preprocessor
-from prcg.models import ResNet
+from prcg.models import ResNet, VGGNet
 from prcg.loss import OIMLoss
 from prcg.trainer import Trainer
 from prcg.evaluator import Evaluator
@@ -33,13 +33,13 @@ def get_data(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
     train_transformer = transforms.Compose([
-        transforms.RandomSizedRectCrop(crop_w, crop_h, ratio=[hw_ratio*0.8, hw_ratio*1.2]),
+        transforms.RandomSizedRectCrop(crop_h, crop_w, ratio=(hw_ratio*0.8, hw_ratio*1.2)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalizer,
     ])
     test_transformer = transforms.Compose([
-        transforms.RectScale(crop_w, crop_h),
+        transforms.Resize(size=(crop_h, crop_w)),
         transforms.ToTensor(),
         normalizer,
     ])
@@ -48,23 +48,23 @@ def get_data(
     if combine_trainval:
         num_classes = dataset.num_trainval_ids
         train_loader = DataLoader(
-            Preprocessor(dataset.trainval, dataset.images_dir, data_type=data_type, transform=train_transformer),
+            Preprocessor(dataset.trainval, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=test_transformer),
             batch_size=batch_size, num_workers=workers,
             shuffle=True, pin_memory=True, drop_last=True)
     else:
         num_classes = dataset.num_train_ids
         train_loader = DataLoader(
-            Preprocessor(dataset.train, dataset.images_dir, data_type=data_type, transform=train_transformer),
+            Preprocessor(dataset.train, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=test_transformer),
             batch_size=batch_size, num_workers=workers,
             shuffle=True, pin_memory=True, drop_last=True)
 
     val_loader = DataLoader(
-        Preprocessor(dataset.val, dataset.images_dir, data_type=data_type, transform=test_transformer),
+        Preprocessor(dataset.val, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=test_transformer),
         batch_size=batch_size, num_workers=workers,
         shuffle=False, pin_memory=True)
 
     test_loader = DataLoader(
-        Preprocessor(dataset.test, dataset.images_dir, data_type=data_type, transform=test_transformer),
+        Preprocessor(dataset.test, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=test_transformer),
         batch_size=batch_size, num_workers=workers,
         shuffle=False, pin_memory=True)
 
@@ -73,6 +73,7 @@ def get_data(
 
 def main(args):
 
+    mkdir_if_missing(args.logs_dir)
     writer = SummaryWriter(args.logs_dir)
 
     sys.stdout = Logger(osp.join(args.logs_dir, 'train_log.txt'))
@@ -93,9 +94,13 @@ def main(args):
 
     # create model
     model = ResNet(args.depth, pretrained=True, num_features=args.features, norm=True, dropout=args.dropout)
+    # model = VGGNet(
+    #     args.depth, with_bn=True, pretrained=True, num_features=args.features, norm=True, dropout=args.dropout,
+    #     input_size=(args.crop_w, args.crop_h))
     if args.pretrained_model is not None:
         model.init_from_pretrained_model(args.pretrained_model)
     model = torch.nn.DataParallel(model).cuda()
+    # model = model.cuda()
 
     # load from checkpoint
     if args.resume:
@@ -184,7 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dataset', type=str, default='pipa',
                         choices=['pipa', 'cim'])
     parser.add_argument('-b', '--batch-size', type=int, default=128)
-    parser.add_argument('-j', '--workers', type=int, default=8)
+    parser.add_argument('-j', '--workers', type=int, default=12)
     # data
     parser.add_argument('--data-type', type=str, default='face',
                         choices=['face', 'head', 'upperbody', 'body'])

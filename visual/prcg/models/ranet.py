@@ -16,13 +16,11 @@ class RANet(nn.Module):
         self.num_features = num_features
         self.weighted_feat = weighted_feat
 
-        self.fc_in = self.num_branch*256
+        self.fc_in = self.num_branch*8
         self.conv_1 = nn.Conv1d(self.num_features, self.fc_in, self.num_branch, 1)
         self.bn_1 = nn.BatchNorm1d(self.fc_in)
         self.relu_1 = nn.ReLU(inplace=True)
-        self.fc_1 = nn.Linear(self.fc_in, 256)
-        self.relu_2 = nn.ReLU(inplace=True)
-        self.fc = nn.Linear(256, self.num_branch)
+        self.fc = nn.Linear(self.fc_in, self.num_branch)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x, y):
@@ -30,8 +28,6 @@ class RANet(nn.Module):
         x = self.bn_1(x)
         x = self.relu_1(x)
         x = x.view(x.size(0), -1)
-        x = self.fc_1(x)
-        x = self.relu_2(x)
         x = self.fc(x)
         score = self.sigmoid(x)
 

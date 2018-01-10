@@ -5,35 +5,45 @@ import torch.nn.init as init
 from torch import nn
 from torch.autograd import Variable
 import torch
-from torchvision.models import resnet18, resnet34, resnet50, resnet101
+from torchvision.models import vgg11, vgg11_bn, vgg13, vgg13_bn, vgg16, vgg16_bn, vgg19, vgg19_bn
 from torch.nn import Parameter
 
 
-class ResNet(nn.Module):
+class VGGNet(nn.Module):
     __factory = {
-        18: resnet18,
-        34: resnet34,
-        50: resnet50,
-        101: resnet101
+        '11': vgg11,
+        '13': vgg13,
+        '16': vgg16,
+        '19': vgg19,
+        '11bn': vgg11,
+        '13bn': vgg13,
+        '16bn': vgg16,
+        '19bn': vgg19
     }
 
-    def __init__(self, depth, pretrained=True, num_features=0, norm=False, embedding=True, dropout=0):
-        super(ResNet, self).__init__()
+    def __init__(
+        self, depth, with_bn=True, pretrained=True,
+            num_features=0, norm=False, embedding=True, dropout=0,
+            input_size=(256, 256)):
+        super(VGGNet, self).__init__()
 
         self.depth = depth
+        self.with_bn = with_bn
         self.pretrained = pretrained
         self.embedding = embedding
 
-        # Construct base (pretrained) resnet
-        if depth not in ResNet.__factory:
-            raise KeyError("Unsupported depth:", depth)
-        self.base = ResNet.__factory[depth](pretrained=pretrained)
+        # Construct base (pretrained) InceptionNet
+        if self.with_bn:
+            self.base = VGGNet.__factory['{:d}bn'.format(depth)](pretrained=pretrained)
+        else:
+            self.base = VGGNet.__factory['{:d}'.format(depth)](pretrained=pretrained)
 
         self.num_features = num_features
         self.norm = norm
         self.dropout = dropout
 
-        out_planes = self.base.fc.in_features
+        # out_planes = self.base.classifier[0].in_features
+        out_planes = 512*(input_size[0]/32)*(input_size[1]/32)
 
         # Append new layers
         self.feat = nn.Linear(out_planes, self.num_features)
@@ -50,11 +60,8 @@ class ResNet(nn.Module):
             self.reset_params()
 
     def forward(self, x):
-        for name, module in self.base._modules.items():
-            if name == 'avgpool':
-                break
+        for name, module in self.base.features._modules.items():
             x = module(x)
-        x = F.avg_pool2d(x, x.size()[2:])
         feature = x.view(x.size(0), -1)
 
         if self.embedding:
@@ -104,7 +111,7 @@ class ResNet(nn.Module):
 
 
 if __name__ == '__main__':
-    model = ResNet(50, num_features=256, norm=True)
+    model = VGGNet(16, with_bn=False, num_features=256, norm=True, input_size=(128, 256))
     x = Variable(torch.zeros(30, 3, 128, 256), requires_grad=False)
     feat = model(x)
     print(feat.data.size())

@@ -77,48 +77,48 @@ class OIM4b(autograd.Function):
         # print('output', outputs.size())
         return outputs
 
-    def backward(self, grad_outputs):
-        features, scores, targets, flags = self.saved_tensors
-        features_b1, features_b2, features_b3, features_b4 = torch.split(features, 1, 1)
-        features_b1 = features_b1.squeeze()
-        features_b2 = features_b2.squeeze()
-        features_b3 = features_b3.squeeze()
-        features_b4 = features_b4.squeeze()
-        scores_b1, scores_b2, scores_b3, scores_b4 = torch.split(scores, 1, 1)
-        flags_b1, flags_b2, flags_b3, flags_b4 = torch.split(flags, 1, 1)
-        grad_inputs = None
-        if self.needs_input_grad[0]:
-            grad_inputs_b1 = grad_outputs.mm(self.lut_b1)
-            grad_inputs_b2 = grad_outputs.mm(self.lut_b2)
-            grad_inputs_b3 = grad_outputs.mm(self.lut_b3)
-            grad_inputs_b4 = grad_outputs.mm(self.lut_b4)
-            grad_inputs = torch.cat((grad_inputs_b1.unsqueeze(1), grad_inputs_b2.unsqueeze(1), grad_inputs_b3.unsqueeze(1), grad_inputs_b4.unsqueeze(1)), 1)
-        for x, score, y, flag in zip(features_b1, scores_b1, targets, flags_b1):
-            score = score.cpu()[0]
-            flag = flag.cpu()[0]
-            if flag > 0:
-                self.lut_b1[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b1[y] + (1.0 - self.momentum) * x
-                self.lut_b1[y] /= self.lut_b1[y].norm()
-        for x, score, y, flag in zip(features_b2, scores_b2, targets, flags_b2):
-            score = score.cpu()[0]
-            flag = flag.cpu()[0]
-            if flag > 0:
-                self.lut_b2[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b2[y] + (1.0 - self.momentum) * x
-                self.lut_b2[y] /= self.lut_b2[y].norm()
-        for x, score, y, flag in zip(features_b3, scores_b3, targets, flags_b3):
-            score = score.cpu()[0]
-            flag = flag.cpu()[0]
-            if flag > 0:
-                self.lut_b3[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b3[y] + (1.0 - self.momentum) * x
-                self.lut_b3[y] /= self.lut_b3[y].norm()
-        for x, score, y, flag in zip(features_b4, scores_b4, targets, flags_b4):
-            score = score.cpu()[0]
-            flag = flag.cpu()[0]
-            if flag > 0:
-                self.lut_b4[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b4[y] + (1.0 - self.momentum) * x
-                self.lut_b4[y] /= self.lut_b4[y].norm()
-        # print('grad_input', grad_inputs.size())
-        return grad_inputs, None, None, None
+    # def backward(self, grad_outputs):
+    #     features, scores, targets, flags = self.saved_tensors
+    #     features_b1, features_b2, features_b3, features_b4 = torch.split(features, 1, 1)
+    #     features_b1 = features_b1.squeeze()
+    #     features_b2 = features_b2.squeeze()
+    #     features_b3 = features_b3.squeeze()
+    #     features_b4 = features_b4.squeeze()
+    #     scores_b1, scores_b2, scores_b3, scores_b4 = torch.split(scores, 1, 1)
+    #     flags_b1, flags_b2, flags_b3, flags_b4 = torch.split(flags, 1, 1)
+    #     grad_inputs = None
+    #     if self.needs_input_grad[0]:
+    #         grad_inputs_b1 = grad_outputs.mm(self.lut_b1)
+    #         grad_inputs_b2 = grad_outputs.mm(self.lut_b2)
+    #         grad_inputs_b3 = grad_outputs.mm(self.lut_b3)
+    #         grad_inputs_b4 = grad_outputs.mm(self.lut_b4)
+    #         grad_inputs = torch.cat((grad_inputs_b1.unsqueeze(1), grad_inputs_b2.unsqueeze(1), grad_inputs_b3.unsqueeze(1), grad_inputs_b4.unsqueeze(1)), 1)
+    #     for x, score, y, flag in zip(features_b1, scores_b1, targets, flags_b1):
+    #         score = score.cpu()[0]
+    #         flag = flag.cpu()[0]
+    #         if flag > 0:
+    #             self.lut_b1[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b1[y] + (1.0 - self.momentum) * x
+    #             self.lut_b1[y] /= self.lut_b1[y].norm()
+    #     for x, score, y, flag in zip(features_b2, scores_b2, targets, flags_b2):
+    #         score = score.cpu()[0]
+    #         flag = flag.cpu()[0]
+    #         if flag > 0:
+    #             self.lut_b2[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b2[y] + (1.0 - self.momentum) * x
+    #             self.lut_b2[y] /= self.lut_b2[y].norm()
+    #     for x, score, y, flag in zip(features_b3, scores_b3, targets, flags_b3):
+    #         score = score.cpu()[0]
+    #         flag = flag.cpu()[0]
+    #         if flag > 0:
+    #             self.lut_b3[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b3[y] + (1.0 - self.momentum) * x
+    #             self.lut_b3[y] /= self.lut_b3[y].norm()
+    #     for x, score, y, flag in zip(features_b4, scores_b4, targets, flags_b4):
+    #         score = score.cpu()[0]
+    #         flag = flag.cpu()[0]
+    #         if flag > 0:
+    #             self.lut_b4[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b4[y] + (1.0 - self.momentum) * x
+    #             self.lut_b4[y] /= self.lut_b4[y].norm()
+    #     # print('grad_input', grad_inputs.size())
+    #     return grad_inputs, None, None, None
 
     # def forward(self, features, scores, targets):
     #     self.save_for_backward(features, scores, targets)
@@ -136,39 +136,39 @@ class OIM4b(autograd.Function):
     #     # print('output', outputs.size())
     #     return outputs
 
-    # def backward(self, grad_outputs):
-    #     features, scores, targets = self.saved_tensors
-    #     features_b1, features_b2, features_b3, features_b4 = torch.split(features, 1, 1)
-    #     features_b1 = features_b1.squeeze()
-    #     features_b2 = features_b2.squeeze()
-    #     features_b3 = features_b3.squeeze()
-    #     features_b4 = features_b4.squeeze()
-    #     scores_b1, scores_b2, scores_b3, scores_b4 = torch.split(scores, 1, 1)
-    #     grad_inputs = None
-    #     if self.needs_input_grad[0]:
-    #         grad_inputs_b1 = grad_outputs.mm(self.lut_b1)
-    #         grad_inputs_b2 = grad_outputs.mm(self.lut_b2)
-    #         grad_inputs_b3 = grad_outputs.mm(self.lut_b3)
-    #         grad_inputs_b4 = grad_outputs.mm(self.lut_b4)
-    #         grad_inputs = torch.cat((grad_inputs_b1.unsqueeze(1), grad_inputs_b2.unsqueeze(1), grad_inputs_b3.unsqueeze(1), grad_inputs_b4.unsqueeze(1)), 1)
-    #     for x, score, y in zip(features_b1, scores_b1, targets):
-    #         score = score.cpu()[0]
-    #         self.lut_b1[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b1[y] + (1.0 - self.momentum) * x
-    #         self.lut_b1[y] /= self.lut_b1[y].norm()
-    #     for x, score, y in zip(features_b2, scores_b2, targets):
-    #         score = score.cpu()[0]
-    #         self.lut_b2[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b2[y] + (1.0 - self.momentum) * x
-    #         self.lut_b2[y] /= self.lut_b2[y].norm()
-    #     for x, score, y in zip(features_b3, scores_b3, targets):
-    #         score = score.cpu()[0]
-    #         self.lut_b3[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b3[y] + (1.0 - self.momentum) * x
-    #         self.lut_b3[y] /= self.lut_b3[y].norm()
-    #     for x, score, y in zip(features_b4, scores_b4, targets):
-    #         score = score.cpu()[0]
-    #         self.lut_b4[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b4[y] + (1.0 - self.momentum) * x
-    #         self.lut_b4[y] /= self.lut_b4[y].norm()
-    #     # print('grad_input', grad_inputs.size())
-    #     return grad_inputs, None, None
+    def backward(self, grad_outputs):
+        features, scores, targets, flags = self.saved_tensors
+        features_b1, features_b2, features_b3, features_b4 = torch.split(features, 1, 1)
+        features_b1 = features_b1.squeeze()
+        features_b2 = features_b2.squeeze()
+        features_b3 = features_b3.squeeze()
+        features_b4 = features_b4.squeeze()
+        scores_b1, scores_b2, scores_b3, scores_b4 = torch.split(scores, 1, 1)
+        grad_inputs = None
+        if self.needs_input_grad[0]:
+            grad_inputs_b1 = grad_outputs.mm(self.lut_b1)
+            grad_inputs_b2 = grad_outputs.mm(self.lut_b2)
+            grad_inputs_b3 = grad_outputs.mm(self.lut_b3)
+            grad_inputs_b4 = grad_outputs.mm(self.lut_b4)
+            grad_inputs = torch.cat((grad_inputs_b1.unsqueeze(1), grad_inputs_b2.unsqueeze(1), grad_inputs_b3.unsqueeze(1), grad_inputs_b4.unsqueeze(1)), 1)
+        for x, score, y in zip(features_b1, scores_b1, targets):
+            score = score.cpu()[0]
+            self.lut_b1[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b1[y] + (1.0 - self.momentum) * x
+            self.lut_b1[y] /= self.lut_b1[y].norm()
+        for x, score, y in zip(features_b2, scores_b2, targets):
+            score = score.cpu()[0]
+            self.lut_b2[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b2[y] + (1.0 - self.momentum) * x
+            self.lut_b2[y] /= self.lut_b2[y].norm()
+        for x, score, y in zip(features_b3, scores_b3, targets):
+            score = score.cpu()[0]
+            self.lut_b3[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b3[y] + (1.0 - self.momentum) * x
+            self.lut_b3[y] /= self.lut_b3[y].norm()
+        for x, score, y in zip(features_b4, scores_b4, targets):
+            score = score.cpu()[0]
+            self.lut_b4[y] = (1.0 - (1.0 - self.momentum) * score) * self.lut_b4[y] + (1.0 - self.momentum) * x
+            self.lut_b4[y] /= self.lut_b4[y].norm()
+        # print('grad_input', grad_inputs.size())
+        return grad_inputs, None, None, None
 
 
 def oim4b(features, scores, targets, flags, lut_b1, lut_b2, lut_b3, lut_b4, momentum=0.5):

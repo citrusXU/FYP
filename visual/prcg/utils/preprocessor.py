@@ -8,12 +8,13 @@ import numpy as np
 
 
 class Preprocessor(object):
-    def __init__(self, dataset, images_dir, data_type='face', transform=None):
+    def __init__(self, dataset, images_dir, default_size, data_type='face', transform=None):
         super(Preprocessor, self).__init__()
         self.dataset = dataset
         self.images_dir = images_dir
         self.data_type = data_type
         self.transform = transform
+        self.default_size = default_size
 
     def __len__(self):
         return len(self.dataset)
@@ -29,7 +30,7 @@ class Preprocessor(object):
         if os.path.isfile(fpath):
             img = Image.open(fpath).convert('RGB')
         else:
-            img = Image.new('RGB', (256, 256))
+            img = Image.new('RGB', self.default_size)
         if self.transform is not None:
             img = self.transform(img)
         return img, fname_prefix, pid

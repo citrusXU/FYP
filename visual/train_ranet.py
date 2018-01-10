@@ -45,6 +45,10 @@ def get_data(
     body_x = torch.load(os.path.join(body_feat_dir, 'feature_label_all_noem.pth.tar'))
     upperbody_y = torch.load(os.path.join(upperbody_feat_dir, 'feature_label_all.pth.tar'))
     upperbody_x = torch.load(os.path.join(upperbody_feat_dir, 'feature_label_all_noem.pth.tar'))
+    print(len(face_x['train_feature'].keys()))
+    print(len(face_y['val_feature'].keys()))
+    print(len(head_x['test_feature'].keys()))
+    print(len(head_y['train_feature'].keys()))
 
     if combine_trainval:
         num_classes = dataset.num_trainval_ids
@@ -59,13 +63,13 @@ def get_data(
             upperbody_featx=merge_dicts(upperbody_x['train_feature'], upperbody_x['val_feature']),
             upperbody_featy=merge_dicts(upperbody_y['train_feature'], upperbody_y['val_feature']))
     else:
-        num_classes = dataset.num_train_ids
+        num_classes = dataset.num_val_ids
         train_processor = FeatPreprocessor4b(
-            dataset.train,
-            head_featx=head_x['train_feature'], head_featy=head_y['train_feature'],
-            face_featx=face_x['train_feature'], face_featy=face_y['train_feature'],
-            body_featx=body_x['train_feature'], body_featy=body_y['train_feature'],
-            upperbody_featx=upperbody_x['train_feature'], upperbody_featy=upperbody_y['train_feature'])
+            dataset.val,
+            head_featx=head_x['val_feature'], head_featy=head_y['val_feature'],
+            face_featx=face_x['val_feature'], face_featy=face_y['val_feature'],
+            body_featx=body_x['val_feature'], body_featy=body_y['val_feature'],
+            upperbody_featx=upperbody_x['val_feature'], upperbody_featy=upperbody_y['val_feature'])
 
     train_loader = DataLoader(
         train_processor, batch_size=batch_size, num_workers=workers,
@@ -171,13 +175,14 @@ def main(args):
     test_top1 = evaluator.test(test_loader, dataset.gallery, dataset.query, print_summary=True)
     for epoch in range(args.start_epoch, args.epochs):
         adjust_lr(epoch)
-        loss, prec = trainer.train(epoch, train_loader, optimizer, print_freq=10)
+        loss, prec = trainer.train(epoch, train_loader, optimizer, print_freq=1)
         writer.add_scalar('Train loss', loss, epoch+1)
         writer.add_scalar('Train accuracy', prec, epoch+1)
 
         top1 = evaluator.evaluate(val_loader, print_summary=False)
         writer.add_scalar('Val accuracy', top1, epoch+1)
         test_top1 = evaluator.test(test_loader, dataset.gallery, dataset.query, print_summary=True)
+        test_top1 = evaluator.test(test_loader, dataset.query, dataset.gallery, print_summary=True)
         writer.add_scalar('Test accuracy', test_top1, epoch+1)
 
         is_best = top1 > best_top1
@@ -202,7 +207,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', type=str, default='pipa',
                         choices=['pipa', 'cim'])
-    parser.add_argument('-b', '--batch-size', type=int, default=128)
+    parser.add_argument('-b', '--batch-size', type=int, default=512)
     parser.add_argument('-j', '--workers', type=int, default=8)
     # data
     parser.add_argument('--data-type', type=str, default='all',
@@ -210,12 +215,12 @@ if __name__ == '__main__':
     parser.add_argument('--combine-trainval', action='store_true',
                         help="Use train and val sets together for training."
                              "Val set is still used for validation.")
-    parser.add_argument('--head_feat_dir', type=str, default='./logs/head_exp1')
-    parser.add_argument('--face_feat_dir', type=str, default='./logs/face_exp1')
-    parser.add_argument('--body_feat_dir', type=str, default='./logs/body_exp1')
-    parser.add_argument('--upperbody_feat_dir', type=str, default='./logs/upperbody_exp1')
+    parser.add_argument('--head_feat_dir', type=str, default='./logs/head_exp2/')
+    parser.add_argument('--face_feat_dir', type=str, default='./logs/face_exp2/')
+    parser.add_argument('--body_feat_dir', type=str, default='./logs/body_exp2')
+    parser.add_argument('--upperbody_feat_dir', type=str, default='./logs/upperbody_exp2')
     # model
-    parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--dropout_ratio', type=float, default=0.9)
     # loss
     parser.add_argument('--loss', type=str, default='oim',
                         choices=['oim'])
@@ -224,7 +229,7 @@ if __name__ == '__main__':
     # optimizer
     parser.add_argument('--optimizer', type=str, default='sgd',
                         choices=['sgd', 'adam'])
-    parser.add_argument('--lr', type=float, default=0.1)
+    parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     # training configs

@@ -32,13 +32,13 @@ def get_data(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
     train_transformer = transforms.Compose([
-        transforms.RandomSizedRectCrop(crop_w, crop_h, ratio=[hw_ratio*0.8, hw_ratio*1.2]),
+        transforms.RandomSizedRectCrop(crop_h, crop_w, ratio=(hw_ratio*0.8, hw_ratio*1.2)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalizer,
     ])
     test_transformer = transforms.Compose([
-        transforms.RectScale(crop_w, crop_h),
+        transforms.Resize(size=(crop_h, crop_w)),
         transforms.ToTensor(),
         normalizer,
     ])
@@ -47,23 +47,23 @@ def get_data(
     if combine_trainval:
         num_classes = dataset.num_trainval_ids
         train_loader = DataLoader(
-            Preprocessor(dataset.trainval, data_type=data_type, transform=train_transformer),
+            Preprocessor(dataset.trainval, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=train_transformer),
             batch_size=batch_size, num_workers=workers,
-            shuffle=True, pin_memory=True)
+            shuffle=False, pin_memory=True, drop_last=False)
     else:
         num_classes = dataset.num_train_ids
         train_loader = DataLoader(
-            Preprocessor(dataset.train, data_type=data_type, transform=train_transformer),
+            Preprocessor(dataset.train, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=train_transformer),
             batch_size=batch_size, num_workers=workers,
-            shuffle=True, pin_memory=True)
+            shuffle=False, pin_memory=True, drop_last=False)
 
     val_loader = DataLoader(
-        Preprocessor(dataset.val, data_type=data_type, transform=test_transformer),
+        Preprocessor(dataset.val, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=test_transformer),
         batch_size=batch_size, num_workers=workers,
         shuffle=False, pin_memory=True)
 
     test_loader = DataLoader(
-        Preprocessor(dataset.test, data_type=data_type, transform=test_transformer),
+        Preprocessor(dataset.test, dataset.images_dir, default_size=(crop_w, crop_h), data_type=data_type, transform=test_transformer),
         batch_size=batch_size, num_workers=workers,
         shuffle=False, pin_memory=True)
 
@@ -72,7 +72,10 @@ def get_data(
 
 def main(args):
 
-    sys.stdout = Logger(osp.join(args.logs_dir, 'test_log.txt'))
+    if args.no_embedding:
+        sys.stdout = Logger(osp.join(args.logs_dir, 'test_noem_log.txt'))
+    else:
+        sys.stdout = Logger(osp.join(args.logs_dir, 'test_log.txt'))
     print(args)
 
     np.random.seed(args.seed)
@@ -134,7 +137,7 @@ if __name__ == '__main__':
                         choices=['face', 'head', 'upperbody', 'body'])
     parser.add_argument('--crop_w', type=int, default=256)
     parser.add_argument('--crop_h', type=int, default=256)
-    parser.add_argument('--hw_ratio', type=int, default=1)
+    parser.add_argument('--hw_ratio', type=float, default=1)
     parser.add_argument('--combine-trainval', action='store_true',
                         help="Use train and val sets together for training."
                              "Val set is still used for validation.")
